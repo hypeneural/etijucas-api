@@ -66,7 +66,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Moderator Role - User permissions + moderation
         $moderatorRole = Role::firstOrCreate(['name' => 'moderator']);
-        $moderatorRole->syncPermissions([
+        $moderatorBasePermissions = [
             // Inherited from user
             'topics.create',
             'topics.update.own',
@@ -82,7 +82,41 @@ class RolesAndPermissionsSeeder extends Seeder
             'alerts.manage',
             'flags.manage',
             'restrictions.manage',
-        ]);
+        ];
+
+        $filamentPermissions = [
+            // Users
+            'view_any_user',
+            'view_user',
+            'update_user',
+            // Bairros
+            'view_any_bairro',
+            'view_bairro',
+            // Restrictions
+            'view_any_user_restriction',
+            'view_user_restriction',
+            'create_user_restriction',
+            'update_user_restriction',
+            // Flags
+            'view_any_content_flag',
+            'view_content_flag',
+            'update_content_flag',
+            // Activity log
+            'view_any_activity_log',
+            'view_activity_log',
+            // Moderation queue page
+            'page_moderation_queue',
+        ];
+
+        $availableFilamentPermissions = Permission::query()
+            ->whereIn('name', $filamentPermissions)
+            ->pluck('name')
+            ->all();
+
+        $moderatorRole->syncPermissions(array_unique(array_merge(
+            $moderatorBasePermissions,
+            $availableFilamentPermissions
+        )));
 
         // Admin Role - All permissions
         $adminRole = Role::firstOrCreate(['name' => 'admin']);

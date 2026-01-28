@@ -77,6 +77,48 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('users', AdminUserController::class);
             Route::post('users/{user}/roles', [AdminUserController::class, 'assignRoles'])
                 ->middleware('role:admin'); // Only admins can assign roles
+
+            // Forum Moderation
+            Route::post('forum/topics/{topic}/hide', [\App\Http\Controllers\Admin\AdminForumController::class, 'hideTopic']);
+            Route::post('forum/users/{user}/suspend', [\App\Http\Controllers\Admin\AdminForumController::class, 'suspendUser']);
+        });
+
+        // =====================================================
+        // Forum Routes
+        // =====================================================
+        Route::prefix('forum')->group(function () {
+            // Public routes (cached)
+            Route::get('topics', [\App\Http\Controllers\Api\Forum\TopicController::class, 'index'])
+                ->middleware('cache.headers:static');
+            Route::get('topics/{topic}', [\App\Http\Controllers\Api\Forum\TopicController::class, 'show']);
+            Route::get('topics/{topic}/comments', [\App\Http\Controllers\Api\Forum\CommentController::class, 'index']);
+
+            // Authenticated routes
+            Route::middleware('auth:sanctum')->group(function () {
+                // Topics CRUD
+                Route::post('topics', [\App\Http\Controllers\Api\Forum\TopicController::class, 'store']);
+                Route::put('topics/{topic}', [\App\Http\Controllers\Api\Forum\TopicController::class, 'update']);
+                Route::delete('topics/{topic}', [\App\Http\Controllers\Api\Forum\TopicController::class, 'destroy']);
+
+                // Topic interactions
+                Route::post('topics/{topic}/like', [\App\Http\Controllers\Api\Forum\TopicLikeController::class, 'toggle']);
+                Route::post('topics/{topic}/save', [\App\Http\Controllers\Api\Forum\SavedTopicController::class, 'toggle']);
+                Route::post('topics/{topic}/report', [\App\Http\Controllers\Api\Forum\ReportController::class, 'reportTopic']);
+
+                // Comments
+                Route::post('topics/{topic}/comments', [\App\Http\Controllers\Api\Forum\CommentController::class, 'store']);
+                Route::delete('topics/{topic}/comments/{comment}', [\App\Http\Controllers\Api\Forum\CommentController::class, 'destroy']);
+
+                // Comment interactions
+                Route::post('comments/{comment}/like', [\App\Http\Controllers\Api\Forum\CommentLikeController::class, 'toggle']);
+                Route::post('comments/{comment}/report', [\App\Http\Controllers\Api\Forum\ReportController::class, 'reportComment']);
+
+                // Upload
+                Route::post('upload', [\App\Http\Controllers\Api\Forum\ForumUploadController::class, 'store']);
+
+                // Saved topics
+                Route::get('saved', [\App\Http\Controllers\Api\Forum\SavedTopicController::class, 'index']);
+            });
         });
     });
 });
