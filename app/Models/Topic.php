@@ -72,13 +72,13 @@ class Topic extends Model implements HasMedia
     public function likes(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'topic_likes')
-            ->withTimestamps();
+            ->withPivot('created_at');
     }
 
     public function saves(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'saved_topics')
-            ->withTimestamps();
+            ->withPivot('created_at');
     }
 
     public function reports(): HasMany

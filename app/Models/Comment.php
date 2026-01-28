@@ -71,7 +71,7 @@ class Comment extends Model
     public function likes(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'comment_likes')
-            ->withTimestamps();
+            ->withPivot('created_at');
     }
 
     public function reports(): HasMany
