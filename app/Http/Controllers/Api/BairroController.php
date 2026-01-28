@@ -23,8 +23,8 @@ class BairroController extends Controller
     public function index(): JsonResponse
     {
         $bairros = Bairro::active()
-            ->orderBy('name')
-            ->get(['id', 'name', 'slug']);
+            ->orderBy('nome')
+            ->get(['id', 'nome', 'slug']);
 
         return response()->json([
             'data' => $bairros,
