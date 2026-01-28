@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Api\BairroController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\OtpController;
@@ -23,8 +24,10 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
 
     // =====================================================
-    // Public Auth Routes
+    // Public Routes
     // =====================================================
+
+    // Auth Routes
     Route::prefix('auth')->group(function () {
         Route::post('send-otp', [OtpController::class, 'send'])
             ->middleware('throttle:10,1'); // 10 requests per minute
@@ -32,8 +35,15 @@ Route::prefix('v1')->group(function () {
         Route::post('verify-otp', [OtpController::class, 'verify'])
             ->middleware('throttle:10,1');
 
+        Route::post('resend-otp', [OtpController::class, 'resend'])
+            ->middleware('throttle:3,1'); // Stricter: 3 per minute
+
         Route::post('register', [AuthController::class, 'register']);
     });
+
+    // Public Data (cached)
+    Route::get('bairros', [BairroController::class, 'index'])
+        ->middleware('cache.headers:static');
 
     // =====================================================
     // Authenticated Routes

@@ -88,6 +88,18 @@ class OtpService
     }
 
     /**
+     * Get the latest OTP for a phone number.
+     */
+    public function getLatestOtp(string $phone, string $type = 'login'): ?OtpCode
+    {
+        return OtpCode::forPhone($phone)
+            ->ofType($type)
+            ->valid()
+            ->latest()
+            ->first();
+    }
+
+    /**
      * Check if phone is rate limited.
      */
     public function isRateLimited(string $phone): bool
