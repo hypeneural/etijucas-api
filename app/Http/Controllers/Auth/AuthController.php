@@ -102,27 +102,28 @@ class AuthController extends Controller
      * 
      * POST /api/v1/auth/refresh
      */
+    /**
+     * Refresh the access token with Grace Period.
+     * 
+     * POST /api/v1/auth/refresh
+     */
     public function refresh(Request $request): JsonResponse
     {
         $request->validate([
             'refreshToken' => ['required', 'string'],
         ]);
 
-        // Parse the refresh token
-        $tokenParts = explode('|', $request->refreshToken);
-        if (count($tokenParts) !== 2) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Refresh token inválido',
-                'code' => 'INVALID_REFRESH_TOKEN',
-            ], 401);
+        $hashedToken = $request->refreshToken;
+
+        // 1. Check if this token was recently rotated (Grace Period)
+        // If it was, return the NEW valid token that replaced it
+        $cacheKey = 'refresh_grace:' . md5($hashedToken);
+        if ($cachedResponse = \Illuminate\Support\Facades\Cache::get($cacheKey)) {
+            return response()->json($cachedResponse);
         }
 
-        $tokenId = $tokenParts[0];
-        $plainToken = $tokenParts[1];
-
-        // Find the token
-        $token = \Laravel\Sanctum\PersonalAccessToken::findToken($request->refreshToken);
+        // 2. Locate the token in database
+        $token = \Laravel\Sanctum\PersonalAccessToken::findToken($hashedToken);
 
         if (!$token || !$token->can('refresh') || $token->expires_at?->isPast()) {
             return response()->json([
@@ -134,18 +135,43 @@ class AuthController extends Controller
 
         $user = $token->tokenable;
 
-        // Revoke old refresh token
-        $token->delete();
+        // 3. Prevent race conditions with atomic lock
+        $lock = \Illuminate\Support\Facades\Cache::lock('refresh_lock:' . $token->id, 5);
 
-        // Generate new tokens
-        $newToken = $user->createToken('app')->plainTextToken;
-        $newRefreshToken = $user->createToken('refresh', ['refresh'], now()->addDays(30))->plainTextToken;
+        try {
+            if (!$lock->get()) {
+                // If locked, it means another request is rotating it right now.
+                // Wait briefly and try to get the grace period result
+                sleep(1);
+                if ($cachedResponse = \Illuminate\Support\Facades\Cache::get($cacheKey)) {
+                    return response()->json($cachedResponse);
+                }
+                // Fallback error if lock released but no cache (unlikely)
+                return response()->json(['message' => 'Tente novamente'], 429);
+            }
 
-        return response()->json([
-            'token' => $newToken,
-            'refreshToken' => $newRefreshToken,
-            'expiresIn' => config('sanctum.expiration', 3600),
-        ]);
+            // 4. Rotate Token
+            // Delete old token
+            $token->delete();
+
+            // Generate new pair
+            $newToken = $user->createToken('app')->plainTextToken;
+            $newRefreshToken = $user->createToken('refresh', ['refresh'], now()->addDays(30))->plainTextToken;
+
+            // 5. Store result in cache for Grace Period (20 seconds)
+            $response = [
+                'token' => $newToken,
+                'refreshToken' => $newRefreshToken,
+                'expiresIn' => config('sanctum.expiration', 3600),
+            ];
+
+            \Illuminate\Support\Facades\Cache::put($cacheKey, $response, 20);
+
+            return response()->json($response);
+
+        } finally {
+            $lock->release();
+        }
     }
 
     /**

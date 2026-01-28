@@ -43,7 +43,10 @@ class RegisterRequest extends FormRequest
             'password' => [
                 'required',
                 'string',
-                'min:6',
+                \Illuminate\Validation\Rules\Password::min(8)
+                    ->mixedCase()
+                    ->numbers()
+                    ->uncompromised(), // Optional: checks HAVEIBEENPWNED
                 'confirmed',
             ],
             'bairroId' => [
@@ -124,6 +127,15 @@ class RegisterRequest extends FormRequest
             $this->merge([
                 'bairro_id' => $this->input('bairroId'),
             ]);
+
+            // Precedence: If bairroId exists, remove address.bairro to avoid ambiguity
+            if ($this->has('address')) {
+                $address = $this->input('address');
+                if (isset($address['bairro'])) {
+                    unset($address['bairro']);
+                    $this->merge(['address' => $address]);
+                }
+            }
         }
     }
 }

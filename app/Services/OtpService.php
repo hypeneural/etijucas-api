@@ -126,6 +126,17 @@ class OtpService
     }
 
     /**
+     * Get remaining rate limit attempts.
+     */
+    public function getRateLimitRemaining(string $phone): int
+    {
+        $key = $this->getRateLimitKey($phone);
+        $attempts = Cache::get($key, 0);
+
+        return max(0, $this->rateLimitMax - $attempts);
+    }
+
+    /**
      * Clean up expired OTP codes.
      */
     public function cleanup(): int

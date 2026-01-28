@@ -42,7 +42,11 @@ class OtpController extends Controller
                 'message' => 'Aguarde para solicitar novo código',
                 'code' => 'RATE_LIMITED',
                 'retryAfter' => $this->otpService->getRetryAfter($phone),
-            ], 429);
+            ], 429)->withHeaders([
+                        'X-RateLimit-Limit' => 3,
+                        'X-RateLimit-Remaining' => 0,
+                        'X-RateLimit-Reset' => now()->addSeconds($this->otpService->getRetryAfter($phone))->timestamp,
+                    ]);
         }
 
         // Check if user already exists
@@ -57,7 +61,10 @@ class OtpController extends Controller
             'userExists' => $userExists,
             'expiresIn' => 300,
             'message' => 'Código enviado para seu WhatsApp',
-        ]);
+        ])->withHeaders([
+                    'X-RateLimit-Limit' => 3,
+                    'X-RateLimit-Remaining' => $this->otpService->getRateLimitRemaining($phone),
+                ]);
     }
 
     /**
