@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 declare(strict_types=1);
 
@@ -17,7 +17,12 @@ class UserRestriction extends Model
     use HasUuids;
     use LogsActivity;
 
+    protected $keyType = 'string';
+
+    public $incrementing = false;
+
     protected $table = 'user_restrictions';
+    protected static string $logName = 'moderation';
 
     /**
      * @var list<string>
@@ -70,6 +75,10 @@ class UserRestriction extends Model
         return $query
             ->whereNull('revoked_at')
             ->where(function ($q) {
+                $q->whereNull('starts_at')
+                    ->orWhere('starts_at', '<=', now());
+            })
+            ->where(function ($q) {
                 $q->whereNull('ends_at')
                     ->orWhere('ends_at', '>', now());
             });
@@ -91,6 +100,10 @@ class UserRestriction extends Model
     public function isActive(): bool
     {
         if ($this->revoked_at !== null) {
+            return false;
+        }
+
+        if ($this->starts_at && $this->starts_at->isFuture()) {
             return false;
         }
 

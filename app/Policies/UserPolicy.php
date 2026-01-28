@@ -9,12 +9,21 @@ class UserPolicy
 {
     use HandlesAuthorization;
 
+    public function before(User $user, string $ability): bool|null
+    {
+        if ($user->hasRole('admin')) {
+            return true;
+        }
+
+        return null;
+    }
+
     /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('users.manage');
+        return $user->hasAnyRole(['admin', 'moderator']);
     }
 
     /**
@@ -22,8 +31,7 @@ class UserPolicy
      */
     public function view(User $user, User $model): bool
     {
-        // Can view own profile or has permission
-        return $user->id === $model->id || $user->can('users.manage');
+        return $user->id === $model->id || $user->hasAnyRole(['admin', 'moderator']);
     }
 
     /**
@@ -31,7 +39,7 @@ class UserPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('users.manage');
+        return $user->hasRole('admin');
     }
 
     /**
@@ -39,8 +47,7 @@ class UserPolicy
      */
     public function update(User $user, User $model): bool
     {
-        // Can update own profile or has permission
-        return $user->id === $model->id || $user->can('users.manage');
+        return $user->id === $model->id || $user->hasAnyRole(['admin', 'moderator']);
     }
 
     /**
@@ -48,8 +55,7 @@ class UserPolicy
      */
     public function delete(User $user, User $model): bool
     {
-        // Only admins can delete users, and cannot delete self
-        return $user->id !== $model->id && $user->can('users.manage');
+        return $user->id !== $model->id && $user->hasRole('admin');
     }
 
     /**
@@ -57,7 +63,7 @@ class UserPolicy
      */
     public function restore(User $user, User $model): bool
     {
-        return $user->can('users.manage');
+        return $user->hasRole('admin');
     }
 
     /**
@@ -73,7 +79,6 @@ class UserPolicy
      */
     public function manageRoles(User $user, User $model): bool
     {
-        // Only admins can manage roles
         return $user->hasRole('admin');
     }
 }

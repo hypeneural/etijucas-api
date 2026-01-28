@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
@@ -16,46 +18,43 @@ class RolesAndPermissionsSeeder extends Seeder
         // Reset cached roles and permissions
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // =====================================================
-        // Topics (Fórum)
-        // =====================================================
-        Permission::create(['name' => 'topics.create']);
-        Permission::create(['name' => 'topics.update.own']);
-        Permission::create(['name' => 'topics.delete.own']);
-        Permission::create(['name' => 'topics.moderate']); // ocultar/remover qualquer
+        $permissions = [
+            // Topics (Forum)
+            'topics.create',
+            'topics.update.own',
+            'topics.delete.own',
+            'topics.moderate',
+            // Comments
+            'comments.create',
+            'comments.delete.own',
+            'comments.moderate',
+            // Reports (Denuncias)
+            'reports.create',
+            'reports.delete.own',
+            'reports.status.update',
+            // Admin Content
+            'events.manage',
+            'phones.manage',
+            'trash.manage',
+            'masses.manage',
+            'alerts.manage',
+            'users.manage',
+            'bairros.manage',
+            // Moderacao
+            'flags.manage',
+            'restrictions.manage',
+        ];
 
-        // =====================================================
-        // Comments
-        // =====================================================
-        Permission::create(['name' => 'comments.create']);
-        Permission::create(['name' => 'comments.delete.own']);
-        Permission::create(['name' => 'comments.moderate']);
-
-        // =====================================================
-        // Reports (Denúncias)
-        // =====================================================
-        Permission::create(['name' => 'reports.create']);
-        Permission::create(['name' => 'reports.delete.own']);
-        Permission::create(['name' => 'reports.status.update']); // moderador/admin
-
-        // =====================================================
-        // Admin Content
-        // =====================================================
-        Permission::create(['name' => 'events.manage']);
-        Permission::create(['name' => 'phones.manage']);
-        Permission::create(['name' => 'trash.manage']);
-        Permission::create(['name' => 'masses.manage']);
-        Permission::create(['name' => 'alerts.manage']);
-        Permission::create(['name' => 'users.manage']);
-        Permission::create(['name' => 'bairros.manage']);
-
-        // =====================================================
-        // Create Roles
-        // =====================================================
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate([
+                'name' => $permission,
+                'guard_name' => 'web',
+            ]);
+        }
 
         // User Role - Basic permissions
-        $userRole = Role::create(['name' => 'user']);
-        $userRole->givePermissionTo([
+        $userRole = Role::firstOrCreate(['name' => 'user']);
+        $userRole->syncPermissions([
             'topics.create',
             'topics.update.own',
             'topics.delete.own',
@@ -66,8 +65,8 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         // Moderator Role - User permissions + moderation
-        $moderatorRole = Role::create(['name' => 'moderator']);
-        $moderatorRole->givePermissionTo([
+        $moderatorRole = Role::firstOrCreate(['name' => 'moderator']);
+        $moderatorRole->syncPermissions([
             // Inherited from user
             'topics.create',
             'topics.update.own',
@@ -81,11 +80,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'comments.moderate',
             'reports.status.update',
             'alerts.manage',
+            'flags.manage',
+            'restrictions.manage',
         ]);
 
         // Admin Role - All permissions
-        $adminRole = Role::create(['name' => 'admin']);
-        $adminRole->givePermissionTo(Permission::all());
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        $adminRole->syncPermissions(Permission::all());
 
         $this->command->info('Roles and permissions seeded successfully!');
         $this->command->table(

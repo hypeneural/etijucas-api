@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Domain\Moderation\Enums\FlagAction;
 use App\Domain\Moderation\Enums\FlagContentType;
@@ -15,11 +15,11 @@ return new class extends Migration {
             $table->uuid('id')->primary();
             $table->enum('content_type', FlagContentType::values())->index();
             $table->uuid('content_id');
-            $table->uuid('reported_by')->nullable()->index();
+            $table->foreignUuid('reported_by')->nullable()->constrained('users')->nullOnDelete();
             $table->enum('reason', FlagReason::values());
             $table->text('message')->nullable();
             $table->enum('status', FlagStatus::values())->default(FlagStatus::Open->value)->index();
-            $table->uuid('handled_by')->nullable()->index();
+            $table->foreignUuid('handled_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('handled_at')->nullable();
             $table->enum('action', FlagAction::values())->nullable();
             $table->json('metadata')->nullable();

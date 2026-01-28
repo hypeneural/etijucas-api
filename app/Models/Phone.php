@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 declare(strict_types=1);
 
@@ -15,7 +15,12 @@ class Phone extends Model
     use HasUuids;
     use LogsActivity;
 
+    protected $keyType = 'string';
+
+    public $incrementing = false;
+
     protected $table = 'phones';
+    protected static string $logName = 'content';
 
     /**
      * @var list<string>

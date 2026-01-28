@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Domain\Moderation\Enums\RestrictionScope;
 use App\Domain\Moderation\Enums\RestrictionType;
@@ -11,15 +11,15 @@ return new class extends Migration {
     {
         Schema::create('user_restrictions', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('user_id')->index();
+            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
             $table->enum('type', RestrictionType::values())->index();
             $table->enum('scope', RestrictionScope::values())->default(RestrictionScope::Global->value);
             $table->text('reason')->nullable();
-            $table->uuid('created_by')->index();
+            $table->foreignUuid('created_by')->constrained('users')->cascadeOnDelete();
             $table->timestamp('starts_at')->nullable();
             $table->timestamp('ends_at')->nullable()->index();
             $table->timestamp('revoked_at')->nullable()->index();
-            $table->uuid('revoked_by')->nullable()->index();
+            $table->foreignUuid('revoked_by')->nullable()->constrained('users')->nullOnDelete();
             $table->json('metadata')->nullable();
             $table->timestamps();
 

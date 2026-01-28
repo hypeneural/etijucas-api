@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Domain\Content\Enums\PhoneCategory;
 use Illuminate\Database\Migrations\Migration;

@@ -5,8 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Domain\Moderation\Enums\RestrictionScope;
+use App\Domain\Moderation\Enums\RestrictionType;
+use App\Models\UserRestriction;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasAvatar;
+use Filament\Models\Contracts\HasName;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Spatie\Activitylog\Models\Activity;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -14,7 +23,7 @@ use Spatie\Permission\Traits\HasRoles;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
-class User extends Authenticatable implements HasMedia
+class User extends Authenticatable implements HasMedia, FilamentUser, HasName, HasAvatar
 {
     use HasApiTokens, HasFactory, HasRoles, HasUuids, Notifiable, SoftDeletes, InteractsWithMedia;
 
@@ -110,6 +119,30 @@ class User extends Authenticatable implements HasMedia
         return $this->hasMany(Topic::class);
     }
 
+    /**
+     * Get the restrictions applied to the user.
+     */
+    public function restrictions(): HasMany
+    {
+        return $this->hasMany(UserRestriction::class);
+    }
+
+    /**
+     * Get the active restrictions for the user.
+     */
+    public function activeRestrictions(): HasMany
+    {
+        return $this->restrictions()->active();
+    }
+
+    /**
+     * Activity logs caused by the user (admin actions).
+     */
+    public function activityLogs(): MorphMany
+    {
+        return $this->morphMany(Activity::class, 'causer');
+    }
+
     // =====================================================
     // Media Collections (Spatie Media Library)
     // =====================================================
@@ -175,5 +208,36 @@ class User extends Authenticatable implements HasMedia
     public function scopeByBairro($query, $bairroId)
     {
         return $query->where('bairro_id', $bairroId);
+    }
+
+    /**
+     * Determine if the user can access the Filament panel.
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        if (! $this->hasAnyRole(['admin', 'moderator'])) {
+            return false;
+        }
+
+        // Block access if a global suspend_login restriction is active
+        return ! $this->hasActiveRestriction(RestrictionType::SuspendLogin, RestrictionScope::Global);
+    }
+
+    public function hasActiveRestriction(RestrictionType $type, ?RestrictionScope $scope = null): bool
+    {
+        return $this->activeRestrictions()
+            ->where('type', $type)
+            ->when($scope !== null, fn($query) => $query->where('scope', $scope))
+            ->exists();
+    }
+
+    public function getFilamentName(): string
+    {
+        return $this->nome ?? $this->email ?? $this->phone ?? $this->id;
+    }
+
+    public function getFilamentAvatarUrl(): ?string
+    {
+        return $this->avatar_url;
     }
 }

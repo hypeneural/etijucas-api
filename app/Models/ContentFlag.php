@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 declare(strict_types=1);
 
@@ -19,7 +19,17 @@ class ContentFlag extends Model
     use HasUuids;
     use LogsActivity;
 
+    protected $keyType = 'string';
+
+    public $incrementing = false;
+
     protected $table = 'content_flags';
+    protected static string $logName = 'moderation';
+
+    protected $attributes = [
+        'status' => FlagStatus::Open->value,
+        'action' => FlagAction::None->value,
+    ];
 
     /**
      * @var list<string>
