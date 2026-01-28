@@ -20,11 +20,25 @@ class UserController extends Controller
     {
         $user = $request->user()->load('bairro', 'roles');
 
-        // Add stats (only if models exist - gracefully handle missing models)
+        // Add stats (gracefully handle missing models)
         $stats = [
-            'reportsCount' => method_exists($user, 'reports') ? $user->reports()->count() : 0,
-            'topicsCount' => method_exists($user, 'topics') ? $user->topics()->count() : 0,
+            'reportsCount' => 0,
+            'topicsCount' => 0,
         ];
+
+        try {
+            if (method_exists($user, 'reports') && class_exists(\App\Models\Report::class)) {
+                $stats['reportsCount'] = $user->reports()->count();
+            }
+        } catch (\Throwable $e) {
+        }
+
+        try {
+            if (method_exists($user, 'topics') && class_exists(\App\Models\Topic::class)) {
+                $stats['topicsCount'] = $user->topics()->count();
+            }
+        } catch (\Throwable $e) {
+        }
 
         return response()->json([
             'data' => array_merge(
