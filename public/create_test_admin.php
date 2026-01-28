@@ -18,7 +18,7 @@ echo "<pre>";
 
 try {
     $email = 'admin@teste.com';
-    $phone = '+5548999999999';
+    $phone = '48999999999';
 
     // Check if user already exists
     $existingUser = \App\Models\User::where('email', $email)->orWhere('phone', $phone)->first();
