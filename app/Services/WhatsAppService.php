@@ -169,12 +169,12 @@ class WhatsAppService
 
     /**
      * Check if running in development mode without Z-API credentials.
+     * Only checks if credentials are configured - will send in any environment
+     * as long as credentials exist.
      */
     protected function isDevMode(): bool
     {
-        return empty($this->instanceId)
-            || empty($this->token)
-            || app()->environment('local', 'testing');
+        return empty($this->instanceId) || empty($this->token);
     }
 
     /**
