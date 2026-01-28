@@ -35,12 +35,12 @@ class TopicResource extends JsonResource
             'liked' => $this->when(
                 $user,
                 fn() => $this->liked ?? $this->likes()->where('user_id', $user?->id)->exists(),
-                false
+                null
             ),
             'isSaved' => $this->when(
                 $user,
                 fn() => $this->is_saved ?? $this->saves()->where('user_id', $user?->id)->exists(),
-                false
+                null
             ),
 
             // Author (hide if anonymous, but admins/moderators see full info)

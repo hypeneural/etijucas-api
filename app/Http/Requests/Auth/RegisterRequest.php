@@ -26,7 +26,7 @@ class RegisterRequest extends FormRequest
             'phone' => [
                 'required',
                 'string',
-                'regex:/^[0-9]{11}$/',
+                'regex:/^[0-9]{10,11}$/',
                 Rule::unique('users', 'phone'),
             ],
             'nome' => [
@@ -40,20 +40,19 @@ class RegisterRequest extends FormRequest
                 'email',
                 Rule::unique('users', 'email'),
             ],
+            // Simplified: only 8+ characters required
             'password' => [
                 'required',
                 'string',
-                \Illuminate\Validation\Rules\Password::min(8)
-                    ->mixedCase()
-                    ->numbers()
-                    ->uncompromised(), // Optional: checks HAVEIBEENPWNED
+                'min:8',
                 'confirmed',
             ],
             'bairroId' => [
                 'nullable',
                 'uuid',
-                Rule::exists('bairros', 'id'),
+                // Removed exists validation - will auto-create if not exists
             ],
+            // Address is completely optional
             'address' => [
                 'nullable',
                 'array',
@@ -87,6 +86,12 @@ class RegisterRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:100',
+                function ($attribute, $value, $fail) {
+                    // Validate city is Tijucas (case insensitive)
+                    if ($value && !in_array(strtolower(trim($value)), ['tijucas', 'tijucas/sc'])) {
+                        $fail('Somente moradores de Tijucas podem se cadastrar.');
+                    }
+                },
             ],
             'address.estado' => [
                 'nullable',
@@ -103,7 +108,7 @@ class RegisterRequest extends FormRequest
     {
         return [
             'phone.required' => 'O telefone é obrigatório.',
-            'phone.regex' => 'O telefone deve ter 11 dígitos (DDD + número).',
+            'phone.regex' => 'O telefone deve ter 10 ou 11 dígitos.',
             'phone.unique' => 'Este telefone já está cadastrado.',
             'nome.required' => 'O nome é obrigatório.',
             'nome.min' => 'O nome deve ter pelo menos 2 caracteres.',
@@ -111,9 +116,10 @@ class RegisterRequest extends FormRequest
             'email.email' => 'O email deve ser um endereço válido.',
             'email.unique' => 'Este email já está cadastrado.',
             'password.required' => 'A senha é obrigatória.',
-            'password.min' => 'A senha deve ter pelo menos 6 caracteres.',
+            'password.min' => 'A senha deve ter pelo menos 8 caracteres.',
             'password.confirmed' => 'A confirmação de senha não confere.',
-            'bairroId.exists' => 'O bairro selecionado não existe.',
+            'bairroId.uuid' => 'O bairro selecionado é inválido.',
+            'address.cep.regex' => 'O CEP deve ter 8 dígitos.',
         ];
     }
 
@@ -122,20 +128,39 @@ class RegisterRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        // Force city and state for Tijucas
+        if ($this->has('address')) {
+            $address = $this->input('address');
+
+            // Always force Tijucas/SC
+            $address['cidade'] = 'Tijucas';
+            $address['estado'] = 'SC';
+
+            $this->merge(['address' => $address]);
+        }
+
         // Convert camelCase to snake_case for bairroId
         if ($this->has('bairroId')) {
             $this->merge([
                 'bairro_id' => $this->input('bairroId'),
             ]);
-
-            // Precedence: If bairroId exists, remove address.bairro to avoid ambiguity
-            if ($this->has('address')) {
-                $address = $this->input('address');
-                if (isset($address['bairro'])) {
-                    unset($address['bairro']);
-                    $this->merge(['address' => $address]);
-                }
-            }
         }
     }
+
+    /**
+     * Get validated data with forced city/state.
+     */
+    public function validated($key = null, $default = null): array
+    {
+        $validated = parent::validated($key, $default);
+
+        // Ensure address has forced values
+        if (isset($validated['address'])) {
+            $validated['address']['cidade'] = 'Tijucas';
+            $validated['address']['estado'] = 'SC';
+        }
+
+        return $validated;
+    }
 }
+

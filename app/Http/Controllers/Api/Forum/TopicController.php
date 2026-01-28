@@ -20,13 +20,39 @@ class TopicController extends Controller
      * 
      * GET /api/v1/forum/topics
      */
+    /**
+     * List topics with filters and pagination.
+     * 
+     * GET /api/v1/forum/topics
+     */
     public function index(Request $request): TopicCollection
+    {
+        // 1. Authenticated users: bypass cache to ensure liked/saved status is personalized
+        if ($request->user()) {
+            return new TopicCollection($this->fetchTopics($request));
+        }
+
+        // 2. Anonymous users: cache the result for performance (60 seconds)
+        // Note: cache key depends on full URL (filters, pagination, sorting)
+        $cacheKey = 'forum:topics:public:' . md5($request->fullUrl());
+
+        $topics = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($request) {
+            return $this->fetchTopics($request);
+        });
+
+        return new TopicCollection($topics);
+    }
+
+    /**
+     * Helper to build and execute the topic query with filters.
+     */
+    private function fetchTopics(Request $request)
     {
         $query = Topic::query()
             ->with(['user', 'bairro'])
             ->active();
 
-        // User interactions (liked, saved) if authenticated
+        // User interactions (liked, saved) only if authenticated
         if ($request->user()) {
             $query->withUserInteractions($request->user()->id);
         }
@@ -72,9 +98,8 @@ class TopicController extends Controller
 
         // Pagination
         $perPage = min($request->input('perPage', 15), 50);
-        $topics = $query->paginate($perPage);
 
-        return new TopicCollection($topics);
+        return $query->paginate($perPage);
     }
 
     /**

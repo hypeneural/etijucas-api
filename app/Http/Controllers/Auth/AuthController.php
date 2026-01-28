@@ -7,11 +7,17 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Models\OtpCode;
 use App\Models\User;
+use App\Services\NeighborhoodService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AuthController extends Controller
 {
+    public function __construct(
+        private NeighborhoodService $neighborhoodService
+    ) {
+    }
+
     /**
      * Register a new user after OTP verification.
      * 
@@ -35,13 +41,33 @@ class AuthController extends Controller
             ], 400);
         }
 
+        // Handle neighborhood - auto-create if needed
+        $bairroId = null;
+        $neighborhoodCreated = false;
+
+        // Priority: bairroId > address.bairro
+        if (!empty($validated['bairroId'])) {
+            // Try to find existing bairro by ID
+            $bairro = \App\Models\Bairro::find($validated['bairroId']);
+            if ($bairro) {
+                $bairroId = $bairro->id;
+            }
+        }
+
+        // If no valid bairroId, try to create from address.bairro
+        if (!$bairroId && !empty($validated['address']['bairro'])) {
+            $bairro = $this->neighborhoodService->ensureExists($validated['address']['bairro']);
+            $bairroId = $bairro->id;
+            $neighborhoodCreated = $bairro->wasRecentlyCreated;
+        }
+
         // Create user
         $user = User::create([
             'phone' => $validated['phone'],
             'password' => $validated['password'], // Cast will hash this
             'nome' => $validated['nome'],
             'email' => $validated['email'] ?? null,
-            'bairro_id' => $validated['bairro_id'] ?? null,
+            'bairro_id' => $bairroId,
             'address' => $validated['address'] ?? null,
             'phone_verified' => true,
             'phone_verified_at' => now(),
@@ -54,12 +80,23 @@ class AuthController extends Controller
         $token = $user->createToken('app')->plainTextToken;
         $refreshToken = $user->createToken('refresh', ['refresh'], now()->addDays(30))->plainTextToken;
 
-        return response()->json([
+        $response = [
             'token' => $token,
             'refreshToken' => $refreshToken,
             'user' => new UserResource($user->load('bairro', 'roles')),
             'expiresIn' => config('sanctum.expiration', 3600),
-        ], 201);
+        ];
+
+        // Add meta info about neighborhood creation
+        if ($neighborhoodCreated) {
+            $response['meta'] = [
+                'neighborhoodCreated' => true,
+                'neighborhoodId' => $bairroId,
+                'neighborhoodName' => $bairro->nome ?? null,
+            ];
+        }
+
+        return response()->json($response, 201);
     }
 
     /**
