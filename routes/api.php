@@ -38,7 +38,11 @@ Route::prefix('v1')->group(function () {
         Route::post('resend-otp', [OtpController::class, 'resend'])
             ->middleware('throttle:3,1'); // Stricter: 3 per minute
 
+        Route::post('login', [AuthController::class, 'login']);
         Route::post('register', [AuthController::class, 'register']);
+
+        Route::post('forgot-password', [\App\Http\Controllers\Auth\ForgotPasswordController::class, 'sendResetLink']);
+        Route::post('reset-password', [\App\Http\Controllers\Auth\ResetPasswordController::class, 'reset']);
     });
 
     // Public Data (cached)

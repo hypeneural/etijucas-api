@@ -38,6 +38,7 @@ class AuthController extends Controller
         // Create user
         $user = User::create([
             'phone' => $validated['phone'],
+            'password' => $validated['password'], // Cast will hash this
             'nome' => $validated['nome'],
             'email' => $validated['email'] ?? null,
             'bairro_id' => $validated['bairro_id'] ?? null,
@@ -59,6 +60,41 @@ class AuthController extends Controller
             'user' => new UserResource($user->load('bairro', 'roles')),
             'expiresIn' => config('sanctum.expiration', 3600),
         ], 201);
+    }
+
+    /**
+     * Login with phone and password.
+     * 
+     * POST /api/v1/auth/login
+     */
+    public function login(Request $request): JsonResponse
+    {
+        $request->validate([
+            'phone' => ['required', 'string'],
+            'password' => ['required', 'string'],
+        ]);
+
+        $user = User::where('phone', $request->phone)->first();
+
+        // Check if user exists and password is correct
+        if (!$user || !\Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Credenciais inválidas',
+                'code' => 'INVALID_CREDENTIALS',
+            ], 401);
+        }
+
+        // Generate tokens
+        $token = $user->createToken('app')->plainTextToken;
+        $refreshToken = $user->createToken('refresh', ['refresh'], now()->addDays(30))->plainTextToken;
+
+        return response()->json([
+            'token' => $token,
+            'refreshToken' => $refreshToken,
+            'user' => new UserResource($user->load('bairro', 'roles')),
+            'expiresIn' => config('sanctum.expiration', 3600),
+        ]);
     }
 
     /**

@@ -45,6 +45,7 @@ class User extends Authenticatable implements HasMedia
     protected $fillable = [
         'phone',
         'email',
+        'password',
         'nome',
         'phone_verified',
         'phone_verified_at',
@@ -60,6 +61,7 @@ class User extends Authenticatable implements HasMedia
      * @var list<string>
      */
     protected $hidden = [
+        'password',
         'remember_token',
     ];
 
@@ -75,6 +77,7 @@ class User extends Authenticatable implements HasMedia
             'phone_verified_at' => 'datetime',
             'address' => 'array',
             'notification_settings' => 'array',
+            'password' => 'hashed',
             'deleted_at' => 'datetime',
         ];
     }

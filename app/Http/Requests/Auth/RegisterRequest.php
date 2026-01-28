@@ -40,6 +40,12 @@ class RegisterRequest extends FormRequest
                 'email',
                 Rule::unique('users', 'email'),
             ],
+            'password' => [
+                'required',
+                'string',
+                'min:6',
+                'confirmed',
+            ],
             'bairroId' => [
                 'nullable',
                 'uuid',
@@ -101,6 +107,9 @@ class RegisterRequest extends FormRequest
             'nome.max' => 'O nome deve ter no máximo 100 caracteres.',
             'email.email' => 'O email deve ser um endereço válido.',
             'email.unique' => 'Este email já está cadastrado.',
+            'password.required' => 'A senha é obrigatória.',
+            'password.min' => 'A senha deve ter pelo menos 6 caracteres.',
+            'password.confirmed' => 'A confirmação de senha não confere.',
             'bairroId.exists' => 'O bairro selecionado não existe.',
         ];
     }
