@@ -84,11 +84,17 @@ class TopicController extends Controller
      */
     public function show(Request $request, Topic $topic): JsonResponse
     {
-        $this->authorize('view', $topic);
+        // Only show active topics to non-admin users
+        if ($topic->status !== TopicStatus::Active) {
+            $user = $request->user();
+            if (!$user || !$user->hasAnyRole(['admin', 'moderator'])) {
+                abort(404);
+            }
+        }
 
         $topic->load(['user', 'bairro']);
 
-        // Add user interactions
+        // Add user interactions if authenticated
         if ($request->user()) {
             $topic->liked = $topic->likes()->where('user_id', $request->user()->id)->exists();
             $topic->is_saved = $topic->saves()->where('user_id', $request->user()->id)->exists();

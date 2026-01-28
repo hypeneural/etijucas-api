@@ -50,6 +50,16 @@ Route::prefix('v1')->group(function () {
         ->middleware('cache.headers:static');
 
     // =====================================================
+    // Forum Public Routes (no auth required, with optional auth)
+    // =====================================================
+    Route::prefix('forum')->middleware('throttle:forum')->group(function () {
+        // Public read endpoints - supports optional auth for liked/saved status
+        Route::get('topics', [\App\Http\Controllers\Api\Forum\TopicController::class, 'index']);
+        Route::get('topics/{topic}', [\App\Http\Controllers\Api\Forum\TopicController::class, 'show']);
+        Route::get('topics/{topic}/comments', [\App\Http\Controllers\Api\Forum\CommentController::class, 'index']);
+    });
+
+    // =====================================================
     // Authenticated Routes
     // =====================================================
     Route::middleware('auth:sanctum')->group(function () {
@@ -84,41 +94,33 @@ Route::prefix('v1')->group(function () {
         });
 
         // =====================================================
-        // Forum Routes
+        // Forum Authenticated Routes
         // =====================================================
-        Route::prefix('forum')->group(function () {
-            // Public routes (cached)
-            Route::get('topics', [\App\Http\Controllers\Api\Forum\TopicController::class, 'index'])
-                ->middleware('cache.headers:static');
-            Route::get('topics/{topic}', [\App\Http\Controllers\Api\Forum\TopicController::class, 'show']);
-            Route::get('topics/{topic}/comments', [\App\Http\Controllers\Api\Forum\CommentController::class, 'index']);
+        Route::prefix('forum')->middleware('throttle:forum')->group(function () {
+            // Topics CRUD
+            Route::post('topics', [\App\Http\Controllers\Api\Forum\TopicController::class, 'store']);
+            Route::put('topics/{topic}', [\App\Http\Controllers\Api\Forum\TopicController::class, 'update']);
+            Route::delete('topics/{topic}', [\App\Http\Controllers\Api\Forum\TopicController::class, 'destroy']);
 
-            // Authenticated routes
-            Route::middleware('auth:sanctum')->group(function () {
-                // Topics CRUD
-                Route::post('topics', [\App\Http\Controllers\Api\Forum\TopicController::class, 'store']);
-                Route::put('topics/{topic}', [\App\Http\Controllers\Api\Forum\TopicController::class, 'update']);
-                Route::delete('topics/{topic}', [\App\Http\Controllers\Api\Forum\TopicController::class, 'destroy']);
+            // Topic interactions
+            Route::post('topics/{topic}/like', [\App\Http\Controllers\Api\Forum\TopicLikeController::class, 'toggle']);
+            Route::post('topics/{topic}/save', [\App\Http\Controllers\Api\Forum\SavedTopicController::class, 'toggle']);
+            Route::post('topics/{topic}/report', [\App\Http\Controllers\Api\Forum\ReportController::class, 'reportTopic']);
 
-                // Topic interactions
-                Route::post('topics/{topic}/like', [\App\Http\Controllers\Api\Forum\TopicLikeController::class, 'toggle']);
-                Route::post('topics/{topic}/save', [\App\Http\Controllers\Api\Forum\SavedTopicController::class, 'toggle']);
-                Route::post('topics/{topic}/report', [\App\Http\Controllers\Api\Forum\ReportController::class, 'reportTopic']);
+            // Comments
+            Route::post('topics/{topic}/comments', [\App\Http\Controllers\Api\Forum\CommentController::class, 'store']);
+            Route::delete('topics/{topic}/comments/{comment}', [\App\Http\Controllers\Api\Forum\CommentController::class, 'destroy']);
 
-                // Comments
-                Route::post('topics/{topic}/comments', [\App\Http\Controllers\Api\Forum\CommentController::class, 'store']);
-                Route::delete('topics/{topic}/comments/{comment}', [\App\Http\Controllers\Api\Forum\CommentController::class, 'destroy']);
+            // Comment interactions
+            Route::post('comments/{comment}/like', [\App\Http\Controllers\Api\Forum\CommentLikeController::class, 'toggle']);
+            Route::post('comments/{comment}/report', [\App\Http\Controllers\Api\Forum\ReportController::class, 'reportComment']);
 
-                // Comment interactions
-                Route::post('comments/{comment}/like', [\App\Http\Controllers\Api\Forum\CommentLikeController::class, 'toggle']);
-                Route::post('comments/{comment}/report', [\App\Http\Controllers\Api\Forum\ReportController::class, 'reportComment']);
+            // Upload
+            Route::post('upload', [\App\Http\Controllers\Api\Forum\ForumUploadController::class, 'store']);
 
-                // Upload
-                Route::post('upload', [\App\Http\Controllers\Api\Forum\ForumUploadController::class, 'store']);
-
-                // Saved topics
-                Route::get('saved', [\App\Http\Controllers\Api\Forum\SavedTopicController::class, 'index']);
-            });
+            // Saved topics
+            Route::get('saved', [\App\Http\Controllers\Api\Forum\SavedTopicController::class, 'index']);
         });
     });
 });
+
