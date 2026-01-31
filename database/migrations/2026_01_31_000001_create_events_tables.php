@@ -82,8 +82,8 @@ return new class extends Migration {
             $table->foreignUuid('category_id')->constrained('event_categories')->cascadeOnDelete();
             $table->string('description_short', 300);
             $table->text('description_full')->nullable();
-            $table->timestamp('start_datetime');
-            $table->timestamp('end_datetime');
+            $table->dateTime('start_datetime');
+            $table->dateTime('end_datetime');
             $table->foreignUuid('venue_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignUuid('organizer_id')->nullable()->constrained()->nullOnDelete();
             $table->string('cover_image_url', 500)->nullable();
@@ -96,7 +96,7 @@ return new class extends Migration {
             $table->boolean('is_featured')->default(false);
             $table->boolean('is_recurring')->default(false);
             $table->json('recurrence_rule')->nullable();
-            $table->timestamp('published_at')->nullable();
+            $table->dateTime('published_at')->nullable();
             $table->softDeletes();
             $table->timestamps();
 
@@ -134,8 +134,8 @@ return new class extends Migration {
             $table->decimal('price', 10, 2);
             $table->unsignedInteger('quantity_total')->nullable();
             $table->unsignedInteger('quantity_sold')->default(0);
-            $table->timestamp('available_from')->nullable();
-            $table->timestamp('available_until')->nullable();
+            $table->dateTime('available_from')->nullable();
+            $table->dateTime('available_until')->nullable();
             $table->boolean('is_active')->default(true);
             $table->unsignedInteger('display_order')->default(0);
             $table->timestamps();
