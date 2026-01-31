@@ -13,6 +13,7 @@ use Filament\Models\Contracts\HasAvatar;
 use Filament\Models\Contracts\HasName;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Spatie\Activitylog\Models\Activity;
@@ -143,6 +144,23 @@ class User extends Authenticatable implements HasMedia, FilamentUser, HasName, H
         return $this->morphMany(Activity::class, 'causer');
     }
 
+    /**
+     * Get the event RSVPs for the user.
+     */
+    public function eventRsvps(): HasMany
+    {
+        return $this->hasMany(EventRsvp::class);
+    }
+
+    /**
+     * Get the favorite events for the user.
+     */
+    public function favoriteEvents(): BelongsToMany
+    {
+        return $this->belongsToMany(Event::class, 'event_favorites')
+            ->withPivot('created_at');
+    }
+
     // =====================================================
     // Media Collections (Spatie Media Library)
     // =====================================================
@@ -215,12 +233,12 @@ class User extends Authenticatable implements HasMedia, FilamentUser, HasName, H
      */
     public function canAccessPanel(Panel $panel): bool
     {
-        if (! $this->hasAnyRole(['admin', 'moderator'])) {
+        if (!$this->hasAnyRole(['admin', 'moderator'])) {
             return false;
         }
 
         // Block access if a global suspend_login restriction is active
-        return ! $this->hasActiveRestriction(RestrictionType::SuspendLogin, RestrictionScope::Global);
+        return !$this->hasActiveRestriction(RestrictionType::SuspendLogin, RestrictionScope::Global);
     }
 
     public function hasActiveRestriction(RestrictionType $type, ?RestrictionScope $scope = null): bool

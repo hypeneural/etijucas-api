@@ -60,6 +60,35 @@ Route::prefix('v1')->group(function () {
     });
 
     // =====================================================
+    // Events Public Routes (no auth required, with optional auth)
+    // =====================================================
+    Route::prefix('events')->group(function () {
+        // List and filters
+        Route::get('/', [\App\Http\Controllers\Api\Events\EventController::class, 'index']);
+        Route::get('/upcoming', [\App\Http\Controllers\Api\Events\EventController::class, 'upcoming']);
+        Route::get('/today', [\App\Http\Controllers\Api\Events\EventController::class, 'today']);
+        Route::get('/weekend', [\App\Http\Controllers\Api\Events\EventController::class, 'weekend']);
+        Route::get('/featured', [\App\Http\Controllers\Api\Events\EventController::class, 'featured']);
+        Route::get('/search', [\App\Http\Controllers\Api\Events\EventController::class, 'search']);
+        Route::get('/date/{date}', [\App\Http\Controllers\Api\Events\EventController::class, 'byDate']);
+        Route::get('/month/{year}/{month}', [\App\Http\Controllers\Api\Events\EventController::class, 'byMonth']);
+        Route::get('/category/{slug}', [\App\Http\Controllers\Api\Events\EventController::class, 'byCategory']);
+        Route::get('/bairro/{bairro}', [\App\Http\Controllers\Api\Events\EventController::class, 'byBairro']);
+        Route::get('/venue/{venue}', [\App\Http\Controllers\Api\Events\EventController::class, 'byVenue']);
+        Route::get('/tag/{slug}', [\App\Http\Controllers\Api\Events\EventController::class, 'byTag']);
+        Route::get('/organizer/{organizer}', [\App\Http\Controllers\Api\Events\EventController::class, 'byOrganizer']);
+
+        // Categories and tags
+        Route::get('/categories', [\App\Http\Controllers\Api\Events\EventCategoryController::class, 'index']);
+        Route::get('/tags', [\App\Http\Controllers\Api\Events\EventTagController::class, 'index']);
+        Route::get('/tags/trending', [\App\Http\Controllers\Api\Events\EventTagController::class, 'trending']);
+
+        // Event details and attendees (public)
+        Route::get('/{event}', [\App\Http\Controllers\Api\Events\EventController::class, 'show']);
+        Route::get('/{event}/attendees', [\App\Http\Controllers\Api\Events\EventRsvpController::class, 'attendees']);
+    });
+
+    // =====================================================
     // Authenticated Routes
     // =====================================================
     Route::middleware('auth:sanctum')->group(function () {
@@ -121,6 +150,24 @@ Route::prefix('v1')->group(function () {
             // Saved topics
             Route::get('saved', [\App\Http\Controllers\Api\Forum\SavedTopicController::class, 'index']);
         });
+
+        // =====================================================
+        // Events Authenticated Routes
+        // =====================================================
+        Route::prefix('events')->group(function () {
+            // RSVP
+            Route::get('/{event}/rsvp', [\App\Http\Controllers\Api\Events\EventRsvpController::class, 'show']);
+            Route::post('/{event}/rsvp', [\App\Http\Controllers\Api\Events\EventRsvpController::class, 'store']);
+            Route::put('/{event}/rsvp', [\App\Http\Controllers\Api\Events\EventRsvpController::class, 'update']);
+            Route::delete('/{event}/rsvp', [\App\Http\Controllers\Api\Events\EventRsvpController::class, 'destroy']);
+
+            // Favorites
+            Route::post('/{event}/favorite', [\App\Http\Controllers\Api\Events\EventFavoriteController::class, 'toggle']);
+        });
+
+        // User Events (RSVPs and Favorites)
+        Route::get('users/me/events', [\App\Http\Controllers\Api\Events\UserEventController::class, 'myEvents']);
+        Route::get('users/me/favorites/events', [\App\Http\Controllers\Api\Events\UserEventController::class, 'myFavorites']);
     });
 });
 
